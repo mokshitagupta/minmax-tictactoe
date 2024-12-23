@@ -6,6 +6,7 @@
     let play = $state(0);
     let winner = $state(null);
     let board = $state(Array(3).fill(Array(3).fill(-1)));
+    let AI_OP = 1;
 
     function reset() {
         board = Array(3).fill(Array(3).fill(-1));
@@ -16,65 +17,113 @@
 
     function getStates(board, turn) {
         // console.log(board)
-        let myb = board
-        let ret = []
-        for (let i = 0; i < myb.length; i++){
-            for (let j = 0; j < myb.length; j++){
-                if (myb[i][j] < 0){
-                    let s = board.map(e => Array.from(e))
-                    s[i][j] = turn
-                    ret.push(s)
+        let ret = [];
+        for (let i = 0; i < board.length; i++) {
+            for (let j = 0; j < board.length; j++) {
+                if (board[i][j] < 0) {
+                    let s = board.map((e) => Array.from(e));
+                    s[i][j] = turn;
+                    ret.push(s);
                 }
             }
         }
-        return ret
+        return ret;
     }
 
-    let ct = 0
-    let seen = {}
+    function indexOfMin(arr) {
+        if (arr.length === 0) {
+            return -1; // Handle empty array
+        }
 
-    function checkRecursive(board, turn, orgTurn){
-        let winr = null
-        ct ++
-        // console.log("recurse", ct)
-        while (winr === null) {
+        let minIndex = 0;
+        let minValue = arr[0];
 
-            if (board.flat().join("") in seen){
-                return seen[board.flat().join("")]
+        for (let i = 1; i < arr.length; i++) {
+            if (arr[i] < minValue) {
+                minValue = arr[i];
+                minIndex = i;
             }
-            winr = checkWinner(board)
-            // console.log("curr winner", winr, turn)
-            if (winr === null) {
-                let states = getStates(board, (turn + 1) % 2)
-                // console.log("More")
-                let ret = []
-                for (let s of states){
-                    // let res = 
-                    // console.log("checking", s, (turn + 2) % 2)
-                    ret.push(checkRecursive(s, (turn + 1) % 2, orgTurn))
-                }
-                // console.log("result of iteration", ret, ct)
+        }
 
-                let r = Math.max(...ret)
-                seen[board.flat().join("")] = r
-                return r
-                // return
-            } else {
-                // console.log("Terminal")
-                if (winr === orgTurn){
-                    seen[board.flat().join("")] = -10
-                    console.log("ret -10", winr, turn, orgTurn)
-                    return -10
-                } else if (winr < 0) {
-                    console.log("ret 0", winr, turn, orgTurn)
-                    seen[board.flat().join("")] = 0
-                    return 0
-                } else {
-                    console.log("ret 10", winr, turn, orgTurn)
-                    seen[board.flat().join("")] = 10
-                    return 10
+        return minIndex;
+    }
+
+    function getStateInds(board) {
+        let ret = [];
+        for (let i = 0; i < board.length; i++) {
+            for (let j = 0; j < board.length; j++) {
+                if (board[i][j] < 0) {
+                    ret.push([i, j]);
                 }
-            } 
+            }
+        }
+        return ret;
+    }
+
+    let ct = 0;
+    let seen = {};
+
+    // function
+
+    function getScore(winr, maxi, board, d) {
+        let sqs = board.flat().filter((el) => el === -1).length;
+        // let extra = checkBlocked(board)
+        let extra = 0
+        // console.log(sqs)
+        if (winr < 0) {
+            return 0;
+        }
+
+        if (winr === 0) {
+            return extra + (10 * (sqs + 1) - d);
+        }
+
+        if (winr === 1) {
+            return - extra + d - (10 * (sqs + 1));
+        }
+    }
+
+    function checkRecursive(board, maxi, d) {
+        // console.log(board)
+        // if (board.flat().includes(undefined)){
+        //     console.log(board , "NOOOOOOOOOOOOOOOOO11111111111")
+        // }
+
+        console.log(maxi)
+        let winr = checkWinner(board);
+        d++;
+        if (winr != null) {
+            // console.log(winr, maxi, board, getScore(winr,maxi))
+            return getScore(winr, maxi, board, d);
+        } else {
+            // look ahead
+        }
+
+        if (maxi === true) {
+            let maxscore = -Infinity;
+            let states = getStates(board, 1);
+            // console.log(states)
+            for (let s of states) {
+                // if (board.flat().includes(undefined)){
+                //     console.log(board, "NOOOOOOOOOOOOOOOOO11111111111")
+                // }
+                let evalu = checkRecursive(s, false, d);
+                // console.log(evalu)
+                maxscore = Math.max(maxscore, evalu);
+            }
+            return maxscore;
+        } else {
+            let minscore = Infinity;
+            let states = getStates(board, 0);
+            for (let s of states) {
+                // if (board.flat().includes(undefined)){
+                //     console.log(board, "NOOOOOOOOOOOOOOOOO11111111111")
+                // }
+                let evalu = checkRecursive(s, true, d);
+                // console.log(evalu)
+                minscore = Math.min(minscore, evalu);
+            }
+            return minscore;
         }
     }
 
@@ -87,7 +136,7 @@
             el1.add(board[i][board.length - 1 - i]);
             let els = new Set(board[i]);
             if (els.size === 1 && els.values().next().value >= 0) {
-                console.log(els.values().next().value, "wins!");
+                // console.log(els.values().next().value, "wins!");
                 return els.values().next().value;
             }
             els.clear();
@@ -95,23 +144,23 @@
                 els.add(board[j][i]);
             }
             if (els.size === 1 && els.values().next().value >= 0) {
-                console.log(els.values().next().value, "wins!");
+                // console.log(els.values().next().value, "wins!");
                 return els.values().next().value;
             }
         }
 
         // console.log(el, el1);
         if (el.size === 1 && el.values().next().value >= 0) {
-            console.log(el.values().next().value, "wins!");
+            // console.log(el.values().next().value, "wins!");
             return el.values().next().value;
         }
 
         if (el1.size === 1 && el1.values().next().value >= 0) {
-            console.log(el1.values().next().value, "wins!");
+            // console.log(el1.values().next().value, "wins!");
             return el1.values().next().value;
         }
         if (new Set(board.flat()).has(-1) === false) {
-            console.log("players tied!");
+            // console.log("players tied!");
             return -1;
         }
 
@@ -122,7 +171,7 @@
 <main>
     <button id="reset" onclick={reset}> Reset Board </button>
     {#key play}
-    <div id="tgrid">
+        <div id="tgrid">
             {#each { length: 3 }, row}
                 {#each { length: 3 }, col}
                     <button
@@ -137,20 +186,42 @@
                             e.target.disabled = true;
                             turn = (turn + 1) % 2;
                             winner = checkWinner(board);
-                            let states = getStates(board, turn)
-                            let results = []
-                            console.log("TURN ==>", turn)
-                            for (let i = 0; i < states.length; i++){
-                                console.log("MAIN RECURSE", states[i])
-                                let score = checkRecursive(states[i], turn, turn)
-                                // console.log(score)
-                                results.push(score)
+                            if (winner !== null){
+                                return
                             }
-                            console.log(results, states)
+                            let states = getStates(board, turn);
+                            let inds = getStateInds(board);
+                            let results = [];
+                            console.log("TURN ==>", turn);
+
+                            if (turn === AI_OP && (board.flat().filter(e => (e === -1)).length > 0)) {
+                                for (let i = 0; i < states.length; i++) {
+                                    console.log("MAIN RECURSE", states[i]);
+                                    let score = checkRecursive(
+                                        states[i],
+                                        false,
+                                        0,
+                                    );
+                                    // console.log(score)
+                                    results.push(score);
+                                }
+                                console.log(results, states);
+                                let ind = inds[indexOfMin(results)];
+                                board[ind[0]][ind[1]] = 1;
+                                let action = document.getElementById(
+                                    `cell-${ind[0]}-${ind[1]}`,
+                                );
+                                action.innerText = "X";
+                                action.disabled = true;
+                                turn = (turn + 1) % 2;
+                                winner = checkWinner(board);
+                            }
+                            // console.log(checkRecursive(board, false))
                             // console.log(board)
                             // console.log(states)
                             // console.log(winner)
                         }}
+                        id={`cell-${row}-${col}`}
                         class="cell"
                     >
                     </button>
@@ -159,17 +230,16 @@
         </div>
     {/key}
     {#key winner}
-    {#if winner !== null}
-        <p id="win">
-            {winner === -1
-                ? "Players ied!"
-                : `Player ${winner === 0 ? "O" : "X"} wins!`}
-        </p>
-    {:else}
-    <p id="win"></p>
-    {/if}
-{/key}
-    
+        {#if winner !== null}
+            <p id="win">
+                {winner === -1
+                    ? "Players tied!"
+                    : `Player ${winner === 0 ? "O" : "X"} wins!`}
+            </p>
+        {:else}
+            <p id="win"></p>
+        {/if}
+    {/key}
 </main>
 
 <style>
