@@ -89,7 +89,7 @@
         //     console.log(board , "NOOOOOOOOOOOOOOOOO11111111111")
         // }
 
-        console.log(maxi)
+        // console.log(maxi)
         let winr = checkWinner(board);
         d++;
         if (winr != null) {
